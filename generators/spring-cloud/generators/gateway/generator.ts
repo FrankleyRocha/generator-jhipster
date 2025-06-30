@@ -117,7 +117,7 @@ export default class GatewayGenerator extends BaseApplicationGenerator<SpringClo
       addDependencies({ application, source }) {
         const { reactive } = application;
         source.addJavaDependencies!([
-          { groupId: 'org.springframework.cloud', artifactId: `spring-cloud-starter-gateway-${reactive ? 'server-webflux' : 'mvc'}` },
+          { groupId: 'org.springframework.cloud', artifactId: `spring-cloud-starter-gateway-server-${reactive ? 'webflux' : 'webmvc'}` },
         ]);
       },
     });
