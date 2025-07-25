@@ -13,14 +13,14 @@ LABEL ALIAS=consul-config-loader
 FROM postgres:17.5
 LABEL ALIAS=postgresql
 
-FROM quay.io/keycloak/keycloak:26.3.1
+FROM quay.io/keycloak/keycloak:26.3.2
 LABEL ALIAS=keycloak
 
 FROM mysql:9.2.0
 
 FROM mariadb:11.8.2
 
-FROM mongo:8.0.11
+FROM mongo:8.0.12
 LABEL ALIAS=mongodb
 
 FROM couchbase/server:7.6.6
@@ -49,7 +49,7 @@ LABEL ALIAS=pulsar
 FROM sonarqube:25.7.0.110598-community
 LABEL ALIAS=sonar
 
-FROM docker.io/bitnami/consul:1.21.2
+FROM docker.io/bitnami/consul:1.21.3
 LABEL ALIAS=consul
 
 FROM prom/prometheus:v3.5.0
@@ -61,7 +61,7 @@ LABEL ALIAS=prometheus-alertmanager
 FROM quay.io/coreos/prometheus-operator:v0.42.1
 LABEL ALIAS=prometheus-operator
 
-FROM grafana/grafana:12.0.2
+FROM grafana/grafana:12.1.0
 LABEL ALIAS=grafana
 
 FROM quay.io/coreos/grafana-watcher:v0.0.8

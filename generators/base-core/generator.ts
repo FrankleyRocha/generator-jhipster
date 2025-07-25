@@ -33,6 +33,8 @@ import semver, { lt as semverLessThan } from 'semver';
 import YeomanGenerator, { type ComposeOptions, type Storage } from 'yeoman-generator';
 import type Environment from 'yeoman-environment';
 import latestVersion from 'latest-version';
+import dotProperties from 'dot-properties';
+import sortKeys from 'sort-keys';
 
 import { CRLF, LF, type Logger, hasCrlr, normalizeLineEndings, removeFieldsWithNullishValues } from '../../lib/utils/index.js';
 import type {
@@ -49,11 +51,13 @@ import { dockerPlaceholderGenerator } from '../docker/utils.js';
 import { GENERATOR_JHIPSTER } from '../generator-constants.js';
 import { getGradleLibsVersionsProperties } from '../gradle/support/dependabot-gradle.js';
 import { convertConfigToOption, extractArgumentsFromConfigs } from '../../lib/command/index.js';
+import type GeneratorsByNamespace from '../types.js';
 import { convertWriteFileSectionsToBlocks, loadConfig, loadConfigDefaults, loadDerivedConfig } from './internal/index.js';
 import type {
   CascatedEditFileCallback,
   EditFileCallback,
   EditFileOptions,
+  PropertyFileKeyUpdate,
   ValidationResult,
   WriteContext,
   WriteFileOptions,
@@ -61,6 +65,7 @@ import type {
 import { CUSTOM_PRIORITIES, PRIORITY_NAMES, PRIORITY_PREFIX, QUEUES } from './priorities.ts';
 import { joinCallbacks } from './support/index.js';
 import type { Config as CoreConfig, Features as CoreFeatures, Options as CoreOptions, GenericTaskGroup } from './types.js';
+import { createJHipster7Context } from './internal/jhipster7-context.ts';
 
 const {
   INITIALIZING,
@@ -601,9 +606,29 @@ You can ignore this error by passing '--skip-checks' to jhipster command.`);
   }
 
   /**
+   * Compose with a jhipster generator using default jhipster config, but queue it immediately.
+   */
+  async dependsOnJHipster<const G extends keyof GeneratorsByNamespace>(
+    gen: G,
+    options?: ComposeOptions<GeneratorsByNamespace[G]>,
+  ): Promise<GeneratorsByNamespace[G]>;
+  async dependsOnJHipster(gen: string, options?: ComposeOptions<CoreGenerator>): Promise<CoreGenerator>;
+  async dependsOnJHipster(generator: string, options?: ComposeOptions<CoreGenerator>): Promise<CoreGenerator> {
+    return this.composeWithJHipster(generator, {
+      ...options,
+      schedule: false,
+    });
+  }
+
+  /**
    * Compose with a jhipster generator using default jhipster config.
    * @return {object} the composed generator
    */
+  async composeWithJHipster<const G extends keyof GeneratorsByNamespace>(
+    gen: G,
+    options?: ComposeOptions<GeneratorsByNamespace[G]>,
+  ): Promise<GeneratorsByNamespace[G]>;
+  async composeWithJHipster(gen: string, options?: ComposeOptions<CoreGenerator>): Promise<CoreGenerator>;
   async composeWithJHipster(gen: string, options?: ComposeOptions<CoreGenerator>): Promise<CoreGenerator> {
     assert(typeof gen === 'string', 'generator should to be a string');
     let generator: string = gen;
@@ -703,12 +728,17 @@ You can ignore this error by passing '--skip-checks' to jhipster command.`);
     assert(paramCount > 0, 'One of sections, blocks or templates is required');
     assert(paramCount === 1, 'Only one of sections, blocks or templates must be provided');
 
-    const { context: templateData = {} } = options;
+    let { context: templateData = {} } = options;
     const { rootTemplatesPath, customizeTemplatePath = file => file, transform: methodTransform = [] } = options;
     const startTime = new Date().getMilliseconds();
     const { customizeTemplatePaths: contextCustomizeTemplatePaths = [] } = templateData as WriteContext;
 
     const { jhipster7Migration } = this.getFeatures();
+    if (jhipster7Migration) {
+      templateData = createJHipster7Context(this, options.context ?? {}, {
+        log: jhipster7Migration === 'verbose' ? (msg: string) => this.log.info(msg) : () => {},
+      });
+    }
 
     /* Build lookup order first has preference.
      * Example
@@ -991,6 +1021,24 @@ templates: ${JSON.stringify(existingTemplates, null, 2)}`;
     const files = (await Promise.all(parsedTemplates.map(template => renderTemplate(template)).filter(Boolean))) as string[];
     this.log.debug(`Time taken to write files: ${new Date().getMilliseconds() - startTime}ms`);
     return files.filter(file => file);
+  }
+
+  /**
+   * Edit a property file, adding or updating a key.
+   */
+  editPropertyFile(file: string, properties: PropertyFileKeyUpdate[], options: EditFileOptions & { sortFile?: boolean } = {}): void {
+    const { sortFile = true, ...editOptions } = options;
+    this.editFile(file, editOptions, content => {
+      const obj = dotProperties.parse(content ?? '');
+      for (const { key, value } of properties) {
+        if (typeof value === 'function') {
+          obj[key] = value(obj[key] as string);
+        } else {
+          obj[key] = value;
+        }
+      }
+      return dotProperties.stringify(sortFile ? sortKeys(obj) : obj, { lineWidth: 120 });
+    });
   }
 
   /**

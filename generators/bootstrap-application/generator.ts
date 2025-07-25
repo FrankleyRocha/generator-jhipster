@@ -62,9 +62,8 @@ export default class BootstrapApplicationGenerator extends BaseApplicationGenera
             gatewayServicesApiAvailable: undefined,
           },
           {
-            cypressTests: ({ testFrameworks }) => testFrameworks?.includes('cypress') ?? false,
-            cucumberTests: ({ testFrameworks }) => testFrameworks?.includes('cucumber') ?? false,
-            gatlingTests: ({ testFrameworks }) => testFrameworks?.includes('gatling') ?? false,
+            cypressTests: ({ testFrameworks }: { testFrameworks: string[] }) => testFrameworks?.includes('cypress') ?? false,
+            gatlingTests: ({ testFrameworks }: { testFrameworks: string[] }) => testFrameworks?.includes('gatling') ?? false,
           } as any,
         );
 

@@ -33,11 +33,11 @@ export default class UpdateGeneratorsGenerator extends BaseCoreGenerator {
 
         const contentToAdd = generators
           .map(([ns, meta]) => {
-            const parts = ns.split(':').length;
             if (ns.startsWith('jhipster:base')) {
               // Base generators cannot be composed with.
               return [];
             }
+            const parts = ns.split(':').length;
             const relativePath = this.relativeDir(this.templatePath('../../../generators/'), dirname(meta.resolved!));
 
             const generateImport = (key: string) =>
